@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gridiron Sheet — NFL stats & matchup edges</title>
+<meta name="theme-color" content="#0B1220">
+<style>
+:root{
+  --night:#0B1220; --panel:#131E31; --panel2:#18263C; --line:#25364F;
+  --chalk:#F1F5FB; --dim:#93A3BA; --gold:#F2B33D; --ice:#4FA3E3;
+  --turf:#3FB07A; --flag:#E2574C; --violet:#8B7BE8;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;color:var(--chalk);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  background:
+   radial-gradient(1000px 460px at 50% -200px, rgba(79,163,227,.16), transparent 62%),
+   radial-gradient(820px 400px at 12% 108%, rgba(63,176,122,.12), transparent 58%),
+   var(--night);
+  min-height:100dvh;display:flex;flex-direction:column}
+a{color:var(--gold)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+header{padding:18px 16px 0;max-width:1020px;margin:0 auto;width:100%}
+.wm{font-weight:900;font-size:clamp(24px,5.6vw,36px);letter-spacing:.1em;
+  background:linear-gradient(180deg,#fff,#cfe0f5 45%,var(--ice));-webkit-background-clip:text;background-clip:text;color:transparent}
+.wm span{background:linear-gradient(180deg,#ffe6ae,var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{color:var(--dim);font-size:12px;letter-spacing:.2em;text-transform:uppercase;margin:2px 0 14px}
+nav{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+nav button{appearance:none;background:none;border:0;border-bottom:3px solid transparent;color:var(--dim);
+  font:inherit;font-weight:700;padding:10px 12px;cursor:pointer;letter-spacing:.04em}
+nav button.on{color:var(--chalk);border-bottom-color:var(--gold)}
+nav button:focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:6px}
+main{max-width:1020px;margin:0 auto;width:100%;padding:16px;flex:1}
+.controls{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:10px}
+label.lbl{display:block;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);margin-bottom:4px}
+input,select{background:var(--panel);border:1px solid var(--line);color:var(--chalk);border-radius:9px;
+  padding:9px 11px;font:inherit}
+button.btn{appearance:none;border:1px solid var(--line);background:var(--panel);color:var(--chalk);border-radius:9px;
+  padding:9px 15px;font:inherit;font-weight:700;cursor:pointer}
+button.gold{background:linear-gradient(180deg,#ffd98d,#F2B33D);
+  border-color:#F2B33D;color:#2a1e05}
+.note{color:var(--dim);font-size:13px;max-width:70ch}
+.empty{color:var(--dim);text-align:center;padding:34px 10px;border:1px dashed var(--line);border-radius:12px}
+.pill{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.08em;border-radius:999px;padding:3px 9px}
+.pill.live{background:linear-gradient(180deg,#ff6b5e,#d8382b);color:#fff;animation:pulse 1.8s infinite}
+.pill.final{background:var(--panel);color:var(--dim);border:1px solid var(--line)}
+.pill.pre{background:rgba(79,163,227,.16);color:var(--ice)}
+.pill.season{background:rgba(139,123,232,.18);color:var(--violet)}
+@keyframes pulse{50%{opacity:.65}}
+@media (prefers-reduced-motion:reduce){.pill.live{animation:none}}
+/* games */
+.game{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);
+  border-radius:14px;padding:13px 14px;margin-bottom:10px;transition:transform .12s ease,box-shadow .12s ease}
+.game:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(0,0,0,.4)}
+.grow{display:flex;align-items:center;gap:10px;padding:5px 0}
+.logo{width:30px;height:30px;object-fit:contain}
+.tname{flex:1;font-weight:700}
+.trec{color:var(--dim);font-size:12.5px;font-weight:400;margin-left:6px}
+.score{font-family:var(--mono);font-size:22px;font-weight:800;min-width:2.4ch;text-align:right}
+.score.win{color:var(--gold)}
+.gmeta{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;
+  border-top:1px solid var(--line);margin-top:8px;padding-top:8px;color:var(--dim);font-size:12.5px}
+/* edges */
+.sides{display:grid;gap:8px;margin-top:10px;grid-template-columns:1fr}
+@media(min-width:640px){.sides{grid-template-columns:1fr 1fr}}
+.side{border:1px solid var(--line);border-radius:11px;padding:10px;background:rgba(0,0,0,.16)}
+.sname{font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.mini{font-family:var(--mono);font-size:12.5px;color:var(--dim);display:flex;flex-wrap:wrap;gap:4px 12px}
+.mini b{color:var(--chalk)}
+.edge{font-size:11px;font-weight:800;border-radius:999px;padding:2px 9px;white-space:nowrap}
+.edge.big{background:linear-gradient(180deg,#5fd39b,#2f9c68);color:#04180f}
+.edge.good{background:rgba(63,176,122,.2);color:var(--turf)}
+.edge.bad{background:rgba(226,87,76,.18);color:var(--flag)}
+.edge.even{background:var(--panel);color:var(--dim);border:1px solid var(--line)}
+/* boards */
+.boards{display:grid;gap:10px;grid-template-columns:1fr}
+@media(min-width:700px){.boards{grid-template-columns:1fr 1fr}}
+.board{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);
+  border-radius:13px;padding:12px 14px}
+.board h3{margin:0 0 8px;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold)}
+.board h4{margin:12px 0 6px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--flag)}
+.brow{display:flex;align-items:center;gap:9px;padding:5px 0;border-bottom:1px solid rgba(37,54,79,.55)}
+.brow:last-child{border-bottom:0}
+.brank{font-family:var(--mono);color:var(--dim);min-width:2.4ch;font-size:13px}
+.blogo{width:22px;height:22px;object-fit:contain}
+.bteam{flex:1;font-weight:600;font-size:14.5px}
+.bval{font-family:var(--mono);font-weight:700;color:var(--ice)}
+.worst .bval{color:var(--flag)}
+.bar{height:4px;border-radius:3px;background:linear-gradient(90deg,var(--ice),var(--violet));margin-top:3px}
+/* tables */
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);
+  padding:8px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:9px 6px;border-bottom:1px solid rgba(37,54,79,.5)}
+tr:hover td{background:rgba(79,163,227,.05)}
+.pname{font-weight:600}
+.pos{color:var(--dim);font-size:11px;margin-left:6px}
+td.mono{font-family:var(--mono)}
+.lead1 td{background:rgba(242,179,61,.07)}
+.hide-sm{display:none}
+@media(min-width:620px){.hide-sm{display:table-cell}}
+footer{border-top:1px solid var(--line);color:var(--dim);font-size:12px;text-align:center;padding:14px;margin-top:22px}
+.err{border:1px solid var(--flag);background:rgba(226,87,76,.08);border-radius:10px;padding:12px;color:var(--chalk)}
+</style>
+</head>
+<body>
+<header>
+  <div class="wm">GRIDIRON<span>★</span>SHEET</div>
+  <div class="sub">NFL stats · matchup edges · live scores</div>
+  <nav>
+    <button class="on" data-v="games">Games</button>
+    <button data-v="edges">Matchup Edges</button>
+    <button data-v="teams">Team Boards</button>
+    <button data-v="players">Player Leaders</button>
+  </nav>
+</header>
+<main>
+  <section id="v-games">
+    <div class="controls">
+      <div><label class="lbl" for="gDate">Date</label><input type="date" id="gDate"></div>
+      <button class="btn gold" id="gGo">Load games</button>
+      <button class="btn" id="gToday">Today</button>
+      <label class="note" style="display:flex;gap:6px;align-items:center;padding:9px 0">
+        <input type="checkbox" id="gAuto"> auto-refresh live scores
+      </label>
+    </div>
+    <div id="gBody"><div class="empty">Loading games…</div></div>
+  </section>
+
+  <section id="v-edges" hidden>
+    <p class="note">Each side's offense rank vs the opponent's defense rank. A positive gap means
+    that offense is stronger than the defense it faces. Rankings come from the selected stats
+    season below — <b>context, not a prediction model</b>.</p>
+    <div class="controls">
+      <div><label class="lbl" for="eDate">Game date</label><input type="date" id="eDate"></div>
+      <div><label class="lbl" for="eSeason">Stats from</label><select id="eSeason"></select></div>
+      <button class="btn gold" id="eGo">Load edges</button>
+    </div>
+    <div id="eBody"><div class="empty">Pick a date and load.</div></div>
+  </section>
+
+  <section id="v-teams" hidden>
+    <div class="controls">
+      <div><label class="lbl" for="tSeason">Season</label><select id="tSeason"></select></div>
+      <div><label class="lbl" for="tType">Type</label>
+        <select id="tType"><option value="2">Regular season</option><option value="1">Preseason</option><option value="3">Postseason</option></select></div>
+      <button class="btn gold" id="tGo">Load boards</button>
+    </div>
+    <div id="tBody"><div class="empty">Loading team boards…</div></div>
+  </section>
+
+  <section id="v-players" hidden>
+    <div class="controls">
+      <div><label class="lbl" for="pSeason">Season</label><select id="pSeason"></select></div>
+      <div><label class="lbl" for="pType">Type</label>
+        <select id="pType"><option value="2">Regular season</option><option value="1">Preseason</option><option value="3">Postseason</option></select></div>
+      <div><label class="lbl" for="pCat">Category</label>
+        <select id="pCat">
+          <option value="passing">Passing (QB)</option>
+          <option value="rushing">Rushing</option>
+          <option value="receiving">Receiving</option>
+          <option value="defensive">Defense</option>
+        </select></div>
+      <button class="btn gold" id="pGo">Load leaders</button>
+    </div>
+    <div id="pBody"><div class="empty">Loading leaders…</div></div>
+  </section>
+</main>
+<footer>
+  Data from ESPN's public endpoints · personal, non-commercial use · not affiliated with the NFL or ESPN
+</footer>
+<script>
+/* ---------------- fetch with CORS fallbacks (same pattern as the MLB sheet) --------------- */
+const PROXIES = [
+  (u) => u,
+  (u) => "https://corsproxy.io/?" + encodeURIComponent(u),
+  (u) => "https://api.allorigins.win/raw?url=" + encodeURIComponent(u),
+];
+async function getJSON(url) {
+  let lastErr;
+  for (const wrap of PROXIES) {
+    try {
+      const ctl = new AbortController();
+      const timer = setTimeout(() => ctl.abort(), 10000);
+      const res = await fetch(wrap(url), { signal: ctl.signal });
+      clearTimeout(timer);
+      if (!res.ok) { lastErr = new Error("HTTP " + res.status); continue; }
+      return await res.json();
+    } catch (e) { lastErr = e; }
+  }
+  throw lastErr || new Error("request failed");
+}
+const S = "https://site.api.espn.com/apis/site/v2/sports/football/nfl";
+const W = "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl";
+
+/* ---------------- helpers --------------- */
+const $ = (s) => document.querySelector(s);
+const ymd = (d) => d.toISOString().slice(0, 10);
+const compact = (s) => String(s).replace(/-/g, "");
+const num = (v, dec) => (v == null || !isFinite(v)) ? "—" : (dec ? (+v).toFixed(dec) : Math.round(v).toLocaleString());
+const logoFor = (t) => (t && (t.logo || (t.logos && t.logos[0] && t.logos[0].href))) ||
+  (t && t.abbreviation ? `https://a.espncdn.com/i/teamlogos/nfl/500/${t.abbreviation.toLowerCase()}.png` : "");
+function seasonGuess() { const d = new Date(); return d.getMonth() >= 7 ? d.getFullYear() : d.getFullYear() - 1; }
+function fillSeasons(sel, span) {
+  const cur = seasonGuess();
+  sel.innerHTML = "";
+  for (let y = cur; y > cur - (span || 6); y--) sel.innerHTML += `<option value="${y}">${y}</option>`;
+}
+/* stat extraction tolerant of ESPN renames */
+function pick(cats, aliases, prefer) {
+  const want = aliases.map((a) => a.toLowerCase());
+  for (const c of cats || []) for (const st of c.stats || []) {
+    const n = String(st.name || "").toLowerCase(), d = String(st.displayName || "").toLowerCase();
+    if (want.includes(n) || want.includes(d)) {
+      let v = prefer && st[prefer] != null ? st[prefer] : (st.value != null ? st.value : st.displayValue);
+      if (typeof v === "string") v = parseFloat(v.replace(/[^0-9.\-]/g, ""));
+      return isFinite(v) ? v : null;
+    }
+  }
+  return null;
+}
+const catsOf = (o) => o.categories || (o.statistics && o.statistics.categories) || [];
+
+/* ---------------- nav --------------- */
+document.querySelectorAll("nav button").forEach((b) => b.addEventListener("click", () => {
+  document.querySelectorAll("nav button").forEach((x) => x.classList.toggle("on", x === b));
+  ["games", "edges", "teams", "players"].forEach((v) => {
+    const el = document.getElementById("v-" + v);
+    if (el) el.hidden = v !== b.dataset.v;
+  });
+  if (b.dataset.v === "edges" && !edgesLoaded) loadEdges();
+  if (b.dataset.v === "teams" && !teamsLoaded) loadTeams();
+  if (b.dataset.v === "players" && !playersLoaded) loadPlayers();
+}));
+
+/* ================= GAMES ================= */
+let autoTimer = null;
+function statusPill(g) {
+  if (g.state === "in") return `<span class="pill live">● LIVE</span>`;
+  if (g.state === "post") return `<span class="pill final">FINAL</span>`;
+  return `<span class="pill pre">UPCOMING</span>`;
+}
+function parseGames(d) {
+  const seasonType = d.season && d.season.type;
+  const week = d.week && d.week.number;
+  const games = (d.events || []).map((e) => {
+    const c = (e.competitions && e.competitions[0]) || {};
+    const cs = c.competitors || [];
+    const side = (ha) => {
+      const x = cs.find((k) => k.homeAway === ha) || {};
+      const t = x.team || {};
+      const rec = (x.records && x.records[0] && x.records[0].summary) || "";
+      return { id: t.id, abbr: t.abbreviation, name: t.displayName || t.name, logo: logoFor(t),
+               score: x.score != null ? +x.score : null, rec, winner: !!x.winner };
+    };
+    const st = (c.status && c.status.type) || {};
+    return { id: e.id, name: e.shortName, date: e.date, state: st.state,
+             detail: st.shortDetail || st.detail || "", venue: (c.venue && c.venue.fullName) || "",
+             home: side("home"), away: side("away") };
+  });
+  return { seasonType, week, games };
+}
+async function loadGames(dateStr) {
+  const el = $("#gBody");
+  el.innerHTML = `<div class="empty">Loading games…</div>`;
+  try {
+    const d = await getJSON(`${S}/scoreboard?dates=${compact(dateStr)}`);
+    const { seasonType, week, games } = parseGames(d);
+    if (!games.length) {
+      el.innerHTML = `<div class="empty">No NFL games on ${dateStr}.<br>Try a Thursday, Sunday, or Monday — or during August, preseason Saturdays.</div>`;
+      return;
+    }
+    const label = seasonType === 1 ? `<span class="pill season">PRESEASON</span>`
+      : seasonType === 3 ? `<span class="pill season">POSTSEASON</span>`
+      : `<span class="pill season">REGULAR SEASON</span>`;
+    let html = `<p class="note">${label} ${week ? "Week " + week + " · " : ""}${games.length} game${games.length > 1 ? "s" : ""} on ${dateStr}</p>`;
+    for (const g of games) {
+      const row = (t) => `<div class="grow">
+        <img class="logo" src="${t.logo}" alt="" onerror="this.style.visibility='hidden'">
+        <span class="tname">${t.name}${t.rec ? `<span class="trec">${t.rec}</span>` : ""}</span>
+        <span class="score ${t.winner ? "win" : ""}">${t.score != null ? t.score : ""}</span></div>`;
+      html += `<div class="game">${row(g.away)}${row(g.home)}
+        <div class="gmeta"><span>${statusPill(g)} ${g.detail}</span><span>${g.venue}</span></div></div>`;
+    }
+    el.innerHTML = html;
+  } catch (e) {
+    el.innerHTML = `<div class="err">Couldn't reach the scoreboard — ${e.message}.<br>
+      If this keeps happening on a phone, the network may be blocking the data host; try again on Wi-Fi.</div>`;
+  }
+}
+$("#gGo").addEventListener("click", () => loadGames($("#gDate").value));
+$("#gToday").addEventListener("click", () => { $("#gDate").value = ymd(new Date()); loadGames($("#gDate").value); });
+$("#gAuto").addEventListener("change", (e) => {
+  clearInterval(autoTimer);
+  if (e.target.checked) autoTimer = setInterval(() => loadGames($("#gDate").value), 45000);
+});
+
+/* ================= TEAM STATS / RANKINGS ================= */
+const statCache = new Map();
+async function teamStats(season, type) {
+  const k = season + ":" + type;
+  if (statCache.has(k)) return statCache.get(k);
+  const d = await getJSON(`${W}/statistics/byteam?region=us&lang=en&contentorigin=espn&season=${season}&seasontype=${type}`);
+  const list = d.teams || d.items || [];
+  const rows = list.map((t) => {
+    const info = t.team || t, cats = catsOf(t);
+    return {
+      id: info.id, abbr: info.abbreviation || info.abbrev || "", name: info.displayName || info.name || "",
+      logo: logoFor(info),
+      totalYds: pick(cats, ["totalYards", "netTotalYards", "total yards"]),
+      passYds: pick(cats, ["netPassingYards", "passingYards", "passing yards"]),
+      rushYds: pick(cats, ["rushingYards", "rushing yards"]),
+      pts: pick(cats, ["totalPoints", "points", "totalPointsPerGame"]),
+      thirdPct: pick(cats, ["thirdDownConvPct", "thirdDownPct", "third down %"]),
+      sacks: pick(cats, ["sacks"]),
+      ints: pick(cats, ["interceptions"]),
+      takeaways: pick(cats, ["totalTakeaways", "takeaways"]),
+      giveaways: pick(cats, ["totalGiveaways", "giveaways", "turnovers"]),
+      yardsAllowed: pick(cats, ["yardsAllowed", "totalYardsAllowed", "yards allowed"]),
+      ptsAllowed: pick(cats, ["pointsAllowed", "totalPointsAllowed", "points allowed"]),
+    };
+  }).filter((r) => r.abbr);
+  if (!rows.length) throw new Error("no team stats returned for that season/type");
+  statCache.set(k, rows);
+  return rows;
+}
+function ranked(rows, field, highIsGood) {
+  const v = rows.filter((r) => isFinite(r[field]) && r[field] != null);
+  const s = [...v].sort((a, b) => highIsGood ? b[field] - a[field] : a[field] - b[field]);
+  const m = new Map(); s.forEach((r, i) => m.set(r.id, i + 1));
+  return { sorted: s, rankOf: (id) => m.get(id) || null, n: s.length };
+}
+const BOARDS = [
+  ["Most total yards", "totalYds", true, 0],
+  ["Fewest yards allowed", "yardsAllowed", false, 0],
+  ["Most rushing yards", "rushYds", true, 0],
+  ["Most passing yards", "passYds", true, 0],
+  ["Most points scored", "pts", true, 0],
+  ["Fewest points allowed", "ptsAllowed", false, 0],
+  ["Best 3rd-down conversion %", "thirdPct", true, 1],
+  ["Most sacks", "sacks", true, 0],
+  ["Most interceptions", "ints", true, 0],
+  ["Most takeaways", "takeaways", true, 0],
+];
+let teamsLoaded = false;
+async function loadTeams() {
+  teamsLoaded = true;
+  const el = $("#tBody");
+  const season = $("#tSeason").value, type = $("#tType").value;
+  el.innerHTML = `<div class="empty">Loading ${season} team boards…</div>`;
+  try {
+    const rows = await teamStats(season, type);
+    const tag = type === "1" ? "preseason" : type === "3" ? "postseason" : "regular season";
+    let html = `<p class="note">${season} ${tag} · ${rows.length} teams. Top 5 and bottom 5 on each board.</p><div class="boards">`;
+    for (const [title, field, high, dec] of BOARDS) {
+      const r = ranked(rows, field, high);
+      if (!r.n) continue;
+      const max = Math.max(...r.sorted.map((x) => Math.abs(x[field] || 0))) || 1;
+      const row = (t, rank) => `<div class="brow">
+        <span class="brank">${rank}</span>
+        <img class="blogo" src="${t.logo}" alt="" onerror="this.style.visibility='hidden'">
+        <span class="bteam">${t.abbr}<div class="bar" style="width:${Math.max(6, Math.round(Math.abs(t[field]) / max * 100))}%"></div></span>
+        <span class="bval">${num(t[field], dec)}</span></div>`;
+      html += `<div class="board"><h3>${title}</h3>
+        ${r.sorted.slice(0, 5).map((t, i) => row(t, i + 1)).join("")}
+        <h4>Bottom 5</h4><div class="worst">
+        ${r.sorted.slice(-5).reverse().map((t, i) => row(t, r.n - i)).join("")}</div></div>`;
+    }
+    el.innerHTML = html + `</div>`;
+  } catch (e) {
+    el.innerHTML = `<div class="err">Couldn't load team stats — ${e.message}.<br>
+      Preseason boards can be empty until games are played; try Regular season, or the prior year.</div>`;
+  }
+}
+$("#tGo").addEventListener("click", loadTeams);
+
+/* ================= MATCHUP EDGES ================= */
+let edgesLoaded = false;
+function edgeTag(gap) {
+  if (gap == null) return `<span class="edge even">no data</span>`;
+  if (gap >= 10) return `<span class="edge big">big edge +${gap}</span>`;
+  if (gap >= 4) return `<span class="edge good">edge +${gap}</span>`;
+  if (gap <= -10) return `<span class="edge bad">tough spot ${gap}</span>`;
+  if (gap <= -4) return `<span class="edge bad">uphill ${gap}</span>`;
+  return `<span class="edge even">even</span>`;
+}
+async function loadEdges() {
+  edgesLoaded = true;
+  const el = $("#eBody");
+  const date = $("#eDate").value, season = $("#eSeason").value;
+  el.innerHTML = `<div class="empty">Loading matchups…</div>`;
+  try {
+    const [sb, rows] = await Promise.all([
+      getJSON(`${S}/scoreboard?dates=${compact(date)}`),
+      teamStats(season, "2"),
+    ]);
+    const { games, seasonType, week } = parseGames(sb);
+    if (!games.length) { el.innerHTML = `<div class="empty">No games on ${date}.</div>`; return; }
+    const off = ranked(rows, "totalYds", true), def = ranked(rows, "yardsAllowed", false);
+    const rush = ranked(rows, "rushYds", true), third = ranked(rows, "thirdPct", true);
+    const byId = new Map(rows.map((r) => [r.id, r]));
+    const side = (t, o) => {
+      const oR = off.rankOf(t.id), dR = def.rankOf(o.id), st = byId.get(t.id) || {};
+      const gap = (oR && dR) ? dR - oR : null;
+      return `<div class="side"><div class="sname">
+          <img class="blogo" src="${t.logo}" alt="" onerror="this.style.visibility='hidden'">
+          <span style="flex:1">${t.name}</span>${edgeTag(gap)}</div>
+        <div class="mini">
+          <span>offense <b>#${oR || "—"}</b></span>
+          <span>vs defense <b>#${dR || "—"}</b></span>
+          <span>rush <b>#${rush.rankOf(t.id) || "—"}</b></span>
+          <span>3rd down <b>#${third.rankOf(t.id) || "—"}</b></span>
+          <span>yds <b>${num(st.totalYds)}</b></span>
+          <span>3rd% <b>${num(st.thirdPct, 1)}</b></span>
+        </div></div>`;
+    };
+    let html = `<p class="note">${games.length} game(s) on ${date}${week ? " · Week " + week : ""} · ranks from ${season} regular season${seasonType === 1 ? " (preseason games shown — ranks are last year's form)" : ""}</p>`;
+    for (const g of games) {
+      html += `<div class="game"><div class="gmeta" style="border:0;margin:0;padding:0 0 6px">
+        <span style="font-weight:800;font-size:16px;color:var(--chalk)">${g.away.abbr} @ ${g.home.abbr}</span>
+        <span>${statusPill(g)} ${g.detail}</span></div>
+        <div class="sides">${side(g.away, g.home)}${side(g.home, g.away)}</div></div>`;
+    }
+    el.innerHTML = html;
+  } catch (e) {
+    el.innerHTML = `<div class="err">Couldn't build edges — ${e.message}</div>`;
+  }
+}
+$("#eGo").addEventListener("click", loadEdges);
+
+/* ================= PLAYER LEADERS ================= */
+const COLS = {
+  passing: [["att", "Att", 0, 1], ["cmp", "Cmp", 0, 1], ["cmpPct", "Cmp%", 1, 1], ["passYds", "Yds", 0, 0],
+            ["passTd", "TD", 0, 0], ["ints", "INT", 0, 1], ["rushYds", "Rush", 0, 1], ["rating", "RTG", 1, 1]],
+  rushing: [["rushYds", "Yds", 0, 0], ["carries", "Att", 0, 1], ["rushTd", "TD", 0, 0], ["ypc", "Y/C", 1, 1]],
+  receiving: [["rec", "Rec", 0, 0], ["recYds", "Yds", 0, 0], ["recTd", "TD", 0, 0], ["targets", "Tgt", 0, 1]],
+  defensive: [["tackles", "Tkl", 0, 0], ["sacks", "Sacks", 1, 0], ["ints", "INT", 0, 0], ["pd", "PD", 0, 1]],
+};
+let playersLoaded = false;
+async function loadPlayers() {
+  playersLoaded = true;
+  const el = $("#pBody");
+  const season = $("#pSeason").value, type = $("#pType").value, cat = $("#pCat").value;
+  el.innerHTML = `<div class="empty">Loading ${cat} leaders…</div>`;
+  try {
+    const d = await getJSON(`${W}/statistics/byathlete?region=us&lang=en&contentorigin=espn&season=${season}&seasontype=${type}&category=${cat}&limit=25`);
+    const list = d.athletes || [];
+    if (!list.length) throw new Error("no leaders returned");
+    const rows = list.map((a) => {
+      const ath = a.athlete || a, cats = catsOf(a);
+      return {
+        name: ath.displayName || ath.fullName || "",
+        pos: (ath.position && (ath.position.abbreviation || ath.position.name)) || "",
+        team: ath.teamShortName || (ath.team && (ath.team.abbreviation || ath.team.displayName)) || "",
+        att: pick(cats, ["passingAttempts", "attempts"]),
+        cmp: pick(cats, ["completions"]),
+        cmpPct: pick(cats, ["completionPct", "completion pct"]),
+        passYds: pick(cats, ["passingYards", "netPassingYards"]),
+        passTd: pick(cats, ["passingTouchdowns"]),
+        ints: pick(cats, ["interceptions"]),
+        rating: pick(cats, ["quarterbackRating", "passerRating", "rating", "QBR"]),
+        rushYds: pick(cats, ["rushingYards"]),
+        carries: pick(cats, ["rushingAttempts", "carries"]),
+        rushTd: pick(cats, ["rushingTouchdowns"]),
+        ypc: pick(cats, ["yardsPerRushAttempt", "yards per carry"]),
+        rec: pick(cats, ["receptions"]),
+        recYds: pick(cats, ["receivingYards"]),
+        recTd: pick(cats, ["receivingTouchdowns"]),
+        targets: pick(cats, ["receivingTargets", "targets"]),
+        tackles: pick(cats, ["totalTackles", "tackles"]),
+        sacks: pick(cats, ["sacks"]),
+        pd: pick(cats, ["passesDefended", "passes defended"]),
+      };
+    });
+    const cols = COLS[cat] || COLS.passing;
+    const tag = type === "1" ? "preseason" : type === "3" ? "postseason" : "regular season";
+    el.innerHTML = `<p class="note">${season} ${tag} · top ${rows.length} by ${cat}</p>
+      <table><thead><tr><th>#</th><th>Player</th><th>Team</th>` +
+      cols.map(([, l, , hide]) => `<th class="${hide ? "hide-sm" : ""}">${l}</th>`).join("") +
+      `</tr></thead><tbody>` +
+      rows.map((p, i) => `<tr class="${i === 0 ? "lead1" : ""}">
+        <td class="mono">${i + 1}</td>
+        <td class="pname">${p.name}${p.pos ? `<span class="pos">${p.pos}</span>` : ""}</td>
+        <td>${p.team}</td>` +
+        cols.map(([f, , dec, hide]) => `<td class="mono ${hide ? "hide-sm" : ""}">${num(p[f], dec)}</td>`).join("") +
+        `</tr>`).join("") + `</tbody></table>`;
+  } catch (e) {
+    el.innerHTML = `<div class="err">Couldn't load leaders — ${e.message}.<br>
+      Preseason leaderboards are thin until games are played; try Regular season or the prior year.</div>`;
+  }
+}
+$("#pGo").addEventListener("click", loadPlayers);
+$("#pCat").addEventListener("change", loadPlayers);
+
+/* ---------------- init --------------- */
+(function init() {
+  const today = ymd(new Date());
+  $("#gDate").value = today; $("#eDate").value = today;
+  fillSeasons($("#tSeason")); fillSeasons($("#pSeason")); fillSeasons($("#eSeason"));
+  // stats default to the last completed regular season; games default to today (preseason now)
+  const prior = String(seasonGuess() - 1);
+  [$("#tSeason"), $("#pSeason"), $("#eSeason")].forEach((s) => { if ([...s.options].some(o => o.value === prior)) s.value = prior; });
+  loadGames(today);
+})();
+</script>
+</body>
+</html>
